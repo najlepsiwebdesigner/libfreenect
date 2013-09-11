@@ -89,31 +89,36 @@ void no_kinect_quit(void)
 
 int main(int argc, char *argv[])
 {
-	srand(time(0));
+  // declare properties 
+  int c;
+  freenect_led_options led;
 
-	while (1) {
-		// Pick a random tilt and a random LED state
-		freenect_led_options led = (freenect_led_options) (rand() % 6); // explicit cast
-		int tilt = (rand() % 30)-15;
-		freenect_raw_tilt_state *state = 0;
-		double dx, dy, dz;
 
-		// Set the LEDs to one of the possible states
-		if (freenect_sync_set_led(led, 0)) no_kinect_quit();
+  // welcome the user
+  puts ("Enter a kinect LED mode ID (1-6):");
 
-		// Set the tilt angle (in degrees)
-		if (freenect_sync_set_tilt_degs(tilt, 0)) no_kinect_quit();
+  // load his decision
+  c=getchar();
 
-		// Get the raw accelerometer values and tilt data
-		if (freenect_sync_get_tilt_state(&state, 0)) no_kinect_quit();
+  // show him his decision
+  printf("You entered: %c", c);    
 
-		// Get the processed accelerometer values (calibrated to gravity)
-		freenect_get_mks_accel(state, &dx, &dy, &dz);
+  // do {
+    
 
-		printf("led[%d] tilt[%d] accel[%lf,%lf,%lf]\n", led, tilt, dx,dy,dz);
+    while (1) {
+      freenect_led_options led = (freenect_led_options) (atoi(&c));
+      
+      if (freenect_sync_set_led(led, 0)) no_kinect_quit();
+    }
+    
 
-		sleep(3);
-	}
+
+  // } while (c == '1' || c == '2' || c == '3' || c == '4' || c == '5' || c == '6');
+
+
+		// sleep(3);
+
 }
 
 
