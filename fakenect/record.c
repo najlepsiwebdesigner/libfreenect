@@ -23,6 +23,23 @@
  * either License.
  */
 
+
+#define PORT 20000
+#define LENGTH 512 
+
+// #include <stdio.h>
+// #include <iostream>
+// #include <string.h>
+// #include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+
+
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libfreenect.h>
@@ -31,6 +48,90 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
+
+
+
+void send_file(char* filename) {
+	int sockfd; 
+	// int nsockfd;
+	// char revbuf[LENGTH]; 
+	struct sockaddr_in remote_addr;
+
+	/* Get the Socket file descriptor */
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
+	    fprintf(stderr, "ERROR: Failed to obtain Socket Descriptor! (errno = %d)\n",1);
+	    // std::exit(1);
+	}
+
+	/* Fill the socket address struct */
+	remote_addr.sin_family = AF_INET; 
+	remote_addr.sin_port = htons(PORT); 
+	inet_pton(AF_INET, "127.0.0.1", &remote_addr.sin_addr); 
+	bzero(&(remote_addr.sin_zero), 8);
+
+	/* Try to connect the remote */
+	if (connect(sockfd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr)) == -1)
+	{
+	    fprintf(stderr, "ERROR: Failed to connect to the host! (errno = %d)\n",2);
+	    exit(1);
+	}
+	else 
+	    printf("[Client] Connected to server at port %d...ok!\n", PORT);
+
+	/* Send File to Server */
+	//if(!fork())
+	//{
+	    const char* fs_name = filename;
+	    char sdbuf[LENGTH]; 
+
+            char buffer[256];
+			bzero(buffer,256);
+            int n;
+            strcpy(buffer, filename);
+
+            // send filename 
+            n = write(sockfd,buffer, 255);
+            if(n<0) printf("Error: sending filename");
+
+	    printf("[Client] Sending %s to the Server... ", fs_name);
+	    FILE *fs = fopen(fs_name, "r");
+	    if(fs == NULL)
+	    {
+	        printf("ERROR: File %s not found.\n", fs_name);
+	        exit(1);
+	    }
+
+	    bzero(sdbuf, LENGTH); 
+	    int fs_block_sz;
+	    while((fs_block_sz = fread(sdbuf, sizeof(char), LENGTH, fs)) > 0)
+	    {
+	        if(send(sockfd, sdbuf, fs_block_sz, 0) < 0)
+	        {
+	            fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", fs_name, 3);
+	            break;
+	        }
+	        bzero(sdbuf, LENGTH);
+	    }
+	    printf("Ok File %s from Client was Sent!\n", fs_name);
+	//}
+
+
+	close (sockfd);
+	printf("[Client] Connection lost.\n");
+
+	printf("sending of first file done, exiting");
+	exit(1);
+}
+
+
+
+
+
+
+
+
+
 
 char *out_dir=0;
 volatile sig_atomic_t running = 1;
@@ -65,6 +166,8 @@ void dump_rgb(FILE *fp, void *data, int data_size)
 {
 	fprintf(fp, "P6 %d %d 255\n", FREENECT_FRAME_W, FREENECT_FRAME_H);
 	fwrite(data, data_size, 1, fp);
+
+	// send_file();
 }
 
 FILE *open_dump(char type, double cur_time, uint32_t timestamp, int data_size, const char *extension)
@@ -78,7 +181,9 @@ FILE *open_dump(char type, double cur_time, uint32_t timestamp, int data_size, c
 		printf("Error: Cannot open file [%s]\n", fn);
 		exit(1);
 	}
-	printf("%s\n", fn);
+
+	// send_file(fn);
+
 	free(fn);
 	return fp;
 }
@@ -279,6 +384,10 @@ void usage()
 
 int main(int argc, char **argv)
 {
+
+	// just for testing of send_file fcn
+	// send_file("house.jpg");
+
 	int c=1;
 	while (c < argc) {
 		if (strcmp(argv[c],"-ffmpeg")==0)
